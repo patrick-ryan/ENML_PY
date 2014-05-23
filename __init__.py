@@ -24,6 +24,27 @@ VALID_URL_PROTOCOLS = [
     "http", "https", "file"
 ]
 
+# TODO: comparing existing resources
+def get_image_objects(html, resource_path):
+    soup = BeautifulSoup(html)
+    images = soup.find_all('img')
+    image_objects = []
+    for image in images:
+        image_src = image['src']
+        alt_data = None
+        if image.has_attr('alt'):
+            alt_data = image['alt']
+        if image_src[0] == '/':
+            src_list = image_src.split('/')
+            resource_url = os.path.join(resource_path,src_list[-1])
+            with open(resource_url, "r") as f:
+                image_data = f.read()
+        else: 
+            image_data = urlopen(image_src).read()
+        mime_type = 'image/' + os.path.splitext(image_src)[1].split('.')[-1]
+        image_objects.append((image_data, mime_type, alt_data))
+    return image_objects
+
 def HTMLToENML(content, **kwargs):
     """
     converts HTML string into ENML string
