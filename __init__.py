@@ -1,8 +1,7 @@
 #!/bin/python 
 # -*- coding: utf-8 -*- 
-import os
+import os.path
 from bs4 import BeautifulSoup
-from flask import url_for
 
 MIME_TO_EXTESION_MAPPING = {
     'image/png': '.png',
@@ -84,8 +83,7 @@ def ENMLToHTML(content, pretty=True, **kwargs):
     html.append(note)
     note.name = 'body'
 
-    # output = html.prettify().encode('utf-8') if pretty else str(html)
-    output = str(html)
+    output = html.prettify().encode('utf-8') if pretty else str(html)
     return output
 
 
@@ -109,7 +107,6 @@ class MediaStore(object):
     def save(self, hash_str, mime_type):
         pass
 
-# flask integration added
 class FileMediaStore(MediaStore):
     def __init__(self, note_store, note_guid, path):
         """
@@ -123,12 +120,13 @@ class FileMediaStore(MediaStore):
         """
         save the specified hash and return the saved file's URL
         """
+        if not os.path.exists(self.path):
+            os.makedirs(self.path)
         data = self._get_resource_by_hash(hash_str)
-        filename = self.path + '/' + hash_str + MIME_TO_EXTESION_MAPPING[mime_type]
-        file_path = os.path.abspath('static') + '/' + filename
-        f = open(file_path, "w")
-        f.write(data)
-        f.close()
-        flask_path = url_for('static', filename=filename)
-        return flask_path
+        file_name = hash_str + MIME_TO_EXTESION_MAPPING[mime_type]
+        file_path = os.path.join(self.path, file_name)
+        if not os.path.isfile(file_path):
+            with open(file_path, "w") as f:
+                f.write(data)
+        return "file://" + file_path
         
