@@ -1,7 +1,9 @@
 #!/bin/python 
 # -*- coding: utf-8 -*- 
 import os.path
+
 from bs4 import BeautifulSoup
+from binascii import hexlify, unhexlify
 
 MIME_TO_EXTESION_MAPPING = {
     'image/png': '.png',
@@ -22,7 +24,7 @@ VALID_URL_PROTOCOLS = [
     "http", "https", "file"
 ]
 
-def HTMLToENML(content):
+def HTMLToENML(content, **kwargs):
     """
     converts HTML string into ENML string
     """
@@ -35,21 +37,32 @@ def HTMLToENML(content):
             checkbox['checked'] = todo['checked']
         todo.replace_with(checkbox)
 
+    note = soup.find('body')
+    if not note:
+        note = soup.new_tag('en-note')
+    else:
+        note.name = 'en-note'
+
     images = soup.find_all('img')
     for image in images:
-        new_tag = soup.new_tag('en-media')
-        hash_str, type_ext = image['src'].rsplit("/",1)[1].rsplit(".",1)
-        new_tag['hash'] = hash_str
-        new_tag['type'] = "image/" + type_ext
-        if image.has_attr('alt'):
-            new_tag['alt'] = image['alt']
-        image.replace_with(new_tag)
+        image.extract()
+    if 'resources' in kwargs:
+        resources = kwargs['resources']
+        for resource in resources:
+            new_tag = soup.new_tag('en-media')
+            new_tag['hash'] = hexlify(resource.data.bodyHash)
+            new_tag['type'] = resource.mime
+            if resource.alternateData:
+                new_tag['alt'] = resource.alternateData
+            note.append(new_tag)
 
-    body = soup.find('body')
-    body.name = 'en-note'
-    [tag.extract() for tag in soup(PROHIBITED_ENML_ELEMENTS)]
-    note = str(body)
-    return note
+    for tag in soup(PROHIBITED_ENML_ELEMENTS):
+        tag.extract()
+
+    enml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+    enml += "<!DOCTYPE en-note SYSTEM \"http://xml.evernote.com/pub/enml2.dtd\">"
+    enml += str(note)
+    return enml
 
 def ENMLToHTML(content, pretty=True, **kwargs):
     """
@@ -79,9 +92,9 @@ def ENMLToHTML(content, pretty=True, **kwargs):
             media.replace_with(new_tag)
     
     note = soup.find('en-note')
+    note.name = 'body'
     html = soup.new_tag('html')
     html.append(note)
-    note.name = 'body'
 
     output = html.prettify().encode('utf-8') if pretty else str(html)
     return output
@@ -100,7 +113,7 @@ class MediaStore(object):
         """
         get resource by its hash
         """
-        hash_bin = hash_str.decode('hex')
+        hash_bin = unhexlify(hash_str)
         resource = self.note_store.getResourceByHash(self.note_guid, hash_bin, True, False, False);
         return resource.data.body
 
@@ -112,9 +125,10 @@ class FileMediaStore(MediaStore):
         """
         note_store: NoteStore object from EvernoteSDK
         note_guid: Guid of the note in which the resouces exist
+        path: The path to store media file
         """
         super(FileMediaStore, self).__init__(note_store, note_guid)
-        self.path = path
+        self.path = os.path.abspath(path)
     
     def save(self, hash_str, mime_type):
         """
