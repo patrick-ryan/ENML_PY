@@ -114,12 +114,15 @@ def ENMLToHTML(content, pretty=True, **kwargs):
             media.replace_with(new_tag)
     
     note = soup.find('en-note')
-    note.name = 'body'
-    html = soup.new_tag('html')
-    html.append(note)
+    if note:
+        note.name = 'body'
+        html = soup.new_tag('html')
+        html.append(note)
 
-    output = html.prettify().encode('utf-8') if pretty else str(html)
-    return output
+        output = html.prettify().encode('utf-8') if pretty else str(html)
+        return output
+      
+    return content
 
 
 class MediaStore(object):
