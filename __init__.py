@@ -3,6 +3,7 @@
 import os.path
 
 from bs4 import BeautifulSoup
+from urllib2 import urlopen
 from binascii import hexlify, unhexlify
 
 MIME_TO_EXTESION_MAPPING = {

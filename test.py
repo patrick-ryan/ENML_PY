@@ -3,7 +3,7 @@
 from evernote.api.client import EvernoteClient, NoteStore, UserStore
 import __init__ as enml
 
-dev_token = 'S=s1:U=677e1:E=145b2a35937:C=13e5af22d3a:P=1cd:A=en-devtoken:V=2:H=c45724de45678421495b2b93bfac8033'
+dev_token = 'changeme'
 client = EvernoteClient(token=dev_token)
 noteStore = client.get_note_store()
 notebooks = noteStore.listNotebooks()
